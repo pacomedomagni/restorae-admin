@@ -1,19 +1,47 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { MagnifyingGlassIcon, EyeIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, EyeIcon, NoSymbolIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { api } from '@/lib/api';
 import UserDetailModal from '@/components/UserDetailModal';
 
 export default function UsersPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const limit = 20;
 
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['users', search],
-    queryFn: () => api.get(`/admin/users${search ? `?search=${search}` : ''}`),
+  const { data: usersData, isLoading } = useQuery({
+    queryKey: ['users', search, page],
+    queryFn: () => api.get(`/admin/users?search=${search}&page=${page}&limit=${limit}`),
   });
+
+  const users = usersData?.users || usersData || [];
+  const totalPages = usersData?.totalPages || 1;
+
+  const disableMutation = useMutation({
+    mutationFn: (userId: string) => api.patch(`/admin/users/${userId}/disable`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+
+  const enableMutation = useMutation({
+    mutationFn: (userId: string) => api.patch(`/admin/users/${userId}/enable`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+
+  const handleToggleStatus = (user: any) => {
+    if (user.isActive) {
+      disableMutation.mutate(user.id);
+    } else {
+      enableMutation.mutate(user.id);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -29,7 +57,10 @@ export default function UsersPage() {
           type="text"
           placeholder="Search by email or name..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
           className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-4 focus:border-brand-500 focus:ring-brand-500"
         />
       </div>
@@ -116,12 +147,24 @@ export default function UsersPage() {
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
-                  <td class
+                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <button
                       onClick={() => setSelectedUserId(user.id)}
-                      className="text-brand-600 hover:text-brand-900"
+                      className="text-brand-600 hover:text-brand-900 mr-3"
+                      title="View Details"
                     >
-                      <EyessName="text-red-600 hover:text-red-900">
-                      <NoSymbolIcon className="h-4 w-4" />
+                      <EyeIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleToggleStatus(user)}
+                      className={user.isActive ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}
+                      title={user.isActive ? 'Disable User' : 'Enable User'}
+                    >
+                      {user.isActive ? (
+                        <NoSymbolIcon className="h-4 w-4" />
+                      ) : (
+                        <CheckCircleIcon className="h-4 w-4" />
+                      )}
                     </button>
                   </td>
                 </tr>
@@ -136,6 +179,29 @@ export default function UsersPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-700">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {selectedUserId && (
         <UserDetailModal

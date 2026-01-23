@@ -7,16 +7,21 @@ import SubscriptionModal from '@/components/SubscriptionModal';
 
 export default function SubscriptionsPage() {
   const [managingSub, setManagingSub] = useState<{ userId: string; tier: string } | null>(null);
+  const [page, setPage] = useState(1);
+  const limit = 20;
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['subscription-stats'],
     queryFn: () => api.get('/admin/subscriptions/stats'),
   });
 
-  const { data: subscriptions, isLoading } = useQuery({
-    queryKey: ['subscriptions'],
-    queryFn: () => api.get('/admin/subscriptions'),
+  const { data: subscriptionsData, isLoading } = useQuery({
+    queryKey: ['subscriptions', page],
+    queryFn: () => api.get(`/admin/subscriptions?page=${page}&limit=${limit}`),
   });
+
+  const subscriptions = subscriptionsData?.subscriptions || subscriptionsData || [];
+  const totalPages = subscriptionsData?.totalPages || 1;
 
   return (
     <div className="space-y-6">
@@ -140,6 +145,32 @@ export default function SubscriptionsPage() {
                 </td>
               </tr>
             )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-700">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {managingSub && (
         <SubscriptionModal
@@ -149,9 +180,6 @@ export default function SubscriptionsPage() {
           currentTier={managingSub.tier}
         />
       )}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }

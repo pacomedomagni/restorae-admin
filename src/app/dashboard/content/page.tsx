@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { api } from '@/lib/api';
 import ContentFormModal from '@/components/ContentFormModal';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -30,7 +30,10 @@ export default function ContentPage() {
   const { data: content, isLoading } = useQuery({
     queryKey: ['content', selectedType],
     queryFn: () =>
-     
+      api.get(
+        `/admin/content${selectedType !== 'all' ? `?type=${selectedType}` : ''}`
+      ),
+  });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/admin/content/${id}`),
@@ -46,9 +49,6 @@ export default function ContentPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['content'] });
     },
-  }); api.get(
-        `/admin/content${selectedType !== 'all' ? `?type=${selectedType}` : ''}`
-      ),
   });
 
   return (
@@ -138,27 +138,9 @@ export default function ContentPage() {
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {item.category || '-'}
                   </td>
-                      onClick={() =>
-                        publishMutation.mutate({
-                          id: item.id,
-                          publish: item.status !== 'PUBLISHED',
-                        })
-                      }
-                      className="text-green-600 hover:text-green-900 mr-3"
-                      title={item.status === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
-                    >
-                      {item.status === 'PUBLISHED' ? '👁️' : '📝'}
-                    </button>
-                    <button
-                      onClick={() => setEditingContent(item)}
-                      className="text-brand-600 hover:text-brand-900 mr-3"
-                    >
-                      <PencilIcon className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => setDeletingContent(item)}
-                      className="text-red-600 hover:text-red-900"
-                     font-semibold leading-5 ${
+                  <td className="whitespace-nowrap px-6 py-4">
+                    <span
+                      className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
                         item.status === 'PUBLISHED'
                           ? 'bg-green-100 text-green-800'
                           : 'bg-yellow-100 text-yellow-800'
@@ -171,7 +153,49 @@ export default function ContentPage() {
                     {item.isPremium ? '✓' : '-'}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                    <button className="text-brand-600 hover:text-brand-900 mr-3">
+                    <button
+                      onClick={() =>
+                        publishMutation.mutate({
+                          id: item.id,
+                          publish: item.status !== 'PUBLISHED',
+                        })
+                      }
+                      className="text-green-600 hover:text-green-900 mr-3"
+                      title={item.status === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
+                    >
+                      {item.status === 'PUBLISHED' ? (
+                        <EyeSlashIcon className="h-4 w-4" />
+                      ) : (
+                        <EyeIcon className="h-4 w-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setEditingContent(item)}
+                      className="text-brand-600 hover:text-brand-900 mr-3"
+                      title="Edit"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeletingContent(item)}
+                      className="text-red-600 hover:text-red-900"
+                      title="Delete"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  No content found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <ContentFormModal
         isOpen={showCreateModal || !!editingContent}
@@ -191,24 +215,6 @@ export default function ContentPage() {
         confirmColor="red"
         onConfirm={() => deleteMutation.mutate(deletingContent.id)}
       />
-                      <PencilIcon className="h-4 w-4" />
-                    </button>
-                    <button className="text-red-600 hover:text-red-900">
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                  No content found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import Modal from '@/components/Modal';
@@ -15,17 +15,24 @@ export default function UserDetailModal({ isOpen, onClose, userId }: UserDetailM
   const queryClient = useQueryClient();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch user details when modal opens
-  useState(() => {
+  useEffect(() => {
     if (isOpen && userId) {
       setLoading(true);
-      api.get(`/admin/users/${userId}`).then((data) => {
-        setUser(data);
-        setLoading(false);
-      });
+      setError(null);
+      api.get(`/admin/users/${userId}`)
+        .then((data) => {
+          setUser(data);
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError('Failed to load user details');
+          setLoading(false);
+        });
     }
-  });
+  }, [isOpen, userId]);
 
   const disableMutation = useMutation({
     mutationFn: () => api.patch(`/admin/users/${userId}/disable`),
@@ -52,6 +59,15 @@ export default function UserDetailModal({ isOpen, onClose, userId }: UserDetailM
       a.href = url;
       a.download = `user-${userId}-data.json`;
       a.click();
+      window.URL.revokeObjectURL(url);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/admin/users/${userId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      onClose();
     },
   });
 
@@ -60,6 +76,16 @@ export default function UserDetailModal({ isOpen, onClose, userId }: UserDetailM
       <Modal isOpen={isOpen} onClose={onClose} title="User Details" size="lg">
         <div className="flex h-64 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
+        </div>
+      </Modal>
+    );
+  }
+
+  if (error) {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title="User Details" size="lg">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-red-600">{error}</p>
         </div>
       </Modal>
     );
@@ -96,6 +122,12 @@ export default function UserDetailModal({ isOpen, onClose, userId }: UserDetailM
               <span className="text-gray-500">Joined:</span>
               <span className="font-medium">{new Date(user.createdAt).toLocaleDateString()}</span>
             </div>
+            {user.lastActiveAt && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Last Active:</span>
+                <span className="font-medium">{new Date(user.lastActiveAt).toLocaleDateString()}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -105,13 +137,26 @@ export default function UserDetailModal({ isOpen, onClose, userId }: UserDetailM
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">Tier:</span>
-              <span className="font-medium">{user.subscription?.tier || 'FREE'}</span>
+              <span className={`font-medium ${
+                user.subscription?.tier === 'PREMIUM' ? 'text-purple-600' :
+                user.subscription?.tier === 'LIFETIME' ? 'text-yellow-600' : ''
+              }`}>
+                {user.subscription?.tier || 'FREE'}
+              </span>
             </div>
             {user.subscription?.isTrialing && (
               <div className="flex justify-between">
                 <span className="text-gray-500">Trial Ends:</span>
-                <span className="font-medium">
+                <span className="font-medium text-orange-600">
                   {new Date(user.subscription.trialEndsAt).toLocaleDateString()}
+                </span>
+              </div>
+            )}
+            {user.subscription?.currentPeriodEnd && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Period Ends:</span>
+                <span className="font-medium">
+                  {new Date(user.subscription.currentPeriodEnd).toLocaleDateString()}
                 </span>
               </div>
             )}
@@ -143,8 +188,11 @@ export default function UserDetailModal({ isOpen, onClose, userId }: UserDetailM
             <h4 className="text-sm font-medium text-gray-900 mb-3">Devices</h4>
             <div className="space-y-2">
               {user.devices.map((device: any) => (
-                <div key={device.id} className="flex justify-between text-sm">
-                  <span className="text-gray-600">{device.deviceName || 'Unknown Device'}</span>
+                <div key={device.id} className="flex justify-between text-sm rounded-md bg-gray-50 p-2">
+                  <div>
+                    <span className="text-gray-900 font-medium">{device.deviceName || 'Unknown Device'}</span>
+                    <span className="text-gray-400 ml-2">({device.platform})</span>
+                  </div>
                   <span className="text-gray-400">
                     {device.lastActiveAt ? new Date(device.lastActiveAt).toLocaleDateString() : 'Never'}
                   </span>
@@ -155,32 +203,44 @@ export default function UserDetailModal({ isOpen, onClose, userId }: UserDetailM
         )}
 
         {/* Actions */}
-        <div className="flex justify-between gap-3 pt-4 border-t">
-          <button
-            onClick={() => exportMutation.mutate()}
-            disabled={exportMutation.isPending}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {exportMutation.isPending ? 'Exporting...' : 'Export Data'}
-          </button>
-          <div className="flex gap-3">
+        <div className="border-t pt-4">
+          <h4 className="text-sm font-medium text-gray-900 mb-3">Actions</h4>
+          <div className="flex flex-wrap gap-2">
             {user.isActive ? (
               <button
                 onClick={() => disableMutation.mutate()}
                 disabled={disableMutation.isPending}
-                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
+                className="rounded-md bg-red-100 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-200 disabled:opacity-50"
               >
-                {disableMutation.isPending ? 'Disabling...' : 'Disable User'}
+                {disableMutation.isPending ? 'Disabling...' : 'Disable Account'}
               </button>
             ) : (
               <button
                 onClick={() => enableMutation.mutate()}
                 disabled={enableMutation.isPending}
-                className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500"
+                className="rounded-md bg-green-100 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-200 disabled:opacity-50"
               >
-                {enableMutation.isPending ? 'Enabling...' : 'Enable User'}
+                {enableMutation.isPending ? 'Enabling...' : 'Enable Account'}
               </button>
             )}
+            <button
+              onClick={() => exportMutation.mutate()}
+              disabled={exportMutation.isPending}
+              className="rounded-md bg-blue-100 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-200 disabled:opacity-50"
+            >
+              {exportMutation.isPending ? 'Exporting...' : 'Export Data (GDPR)'}
+            </button>
+            <button
+              onClick={() => {
+                if (window.confirm('Are you sure you want to permanently delete this user? This action cannot be undone.')) {
+                  deleteMutation.mutate();
+                }
+              }}
+              disabled={deleteMutation.isPending}
+              className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete User'}
+            </button>
           </div>
         </div>
       </div>
