@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { api } from '@/lib/api';
+import { signIn, signOut, useSession } from 'next-auth/react';
 
 interface User {
   id: string;
@@ -23,80 +23,57 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const { data: session, status } = useSession();
+
+  const user: User | null = useMemo(() => {
+    if (!session?.user) return null;
+    return {
+      id: (session.user as any).id,
+      email: session.user.email || '',
+      name: session.user.name || undefined,
+      role: (session.user as any).role,
+    };
+  }, [session]);
+
+  const isLoading = status === 'loading';
+  const isAuthenticated = status === 'authenticated' && !!user;
 
   const checkAuth = async () => {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      setUser(null);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      // Verify token by fetching user profile
-      const userData = await api.get('/users/me');
-      
-      // Check if user has admin role
-      if (!['ADMIN', 'ANALYST', 'SUPPORT'].includes(userData.role)) {
-        throw new Error('Insufficient permissions');
-      }
-
-      setUser(userData);
-    } catch (error) {
-      // Token invalid or expired
-      localStorage.removeItem('adminToken');
-      document.cookie = 'adminToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      setUser(null);
-      
-      // Only redirect if on a protected page
-      if (pathname?.startsWith('/dashboard')) {
-        router.push('/login');
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    // NextAuth manages session state; this is a no-op for compatibility.
+    return;
   };
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    if (!isLoading && isAuthenticated && user && !['ADMIN', 'ANALYST', 'SUPPORT'].includes(user.role)) {
+      signOut({ callbackUrl: '/login' });
+      return;
+    }
+
+    if (!isLoading && !isAuthenticated && pathname?.startsWith('/dashboard')) {
+      router.push('/login');
+    }
+  }, [isLoading, isAuthenticated, pathname, router, user]);
 
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const response = await api.post('/auth/login', { email, password });
-      const { accessToken, user: userData } = response;
+    const result = await signIn('credentials', {
+      redirect: false,
+      email,
+      password,
+    });
 
-      // Check if user has admin role
-      if (!['ADMIN', 'ANALYST', 'SUPPORT'].includes(userData.role)) {
-        throw new Error('Access denied. Admin privileges required.');
-      }
-
-      // Store token
-      localStorage.setItem('adminToken', accessToken);
-      document.cookie = `adminToken=${accessToken}; path=/; max-age=86400; samesite=strict`;
-
-      setUser(userData);
-      
-      // Redirect to dashboard or intended page
-      const params = new URLSearchParams(window.location.search);
-      const redirect = params.get('redirect') || '/dashboard';
-      router.push(redirect);
-    } catch (error: any) {
-      setIsLoading(false);
-      throw error;
+    if (result?.error) {
+      throw new Error('Invalid credentials');
     }
+
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect') || '/dashboard';
+    router.push(redirect);
   };
 
   const logout = () => {
-    localStorage.removeItem('adminToken');
-    document.cookie = 'adminToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    setUser(null);
-    router.push('/login');
+    signOut({ callbackUrl: '/login' });
   };
 
   return (
@@ -104,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isLoading,
-        isAuthenticated: !!user,
+        isAuthenticated,
         login,
         logout,
         checkAuth,

@@ -14,7 +14,9 @@ export const authOptions = {
         
         try {
           // Connect to Backend API to verify credentials
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+          const apiRoot = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
+          const apiPrefix = process.env.NEXT_PUBLIC_API_PREFIX || '/api/v1';
+          const res = await fetch(`${apiRoot}${apiPrefix}/auth/login`, {
             method: 'POST',
             body: JSON.stringify(credentials),
             headers: { "Content-Type": "application/json" }
@@ -23,6 +25,9 @@ export const authOptions = {
           const user = await res.json();
 
           if (res.ok && user) {
+            if (!['ADMIN', 'ANALYST', 'SUPPORT'].includes(user.user?.role)) {
+              return null;
+            }
             // Return user object with token
             return {
                id: user.user.id,
@@ -51,6 +56,7 @@ export const authOptions = {
     async session({ session, token }) {
       session.user.role = token.role;
       session.accessToken = token.accessToken;
+      (session.user as any).id = token.sub;
       return session;
     }
   },

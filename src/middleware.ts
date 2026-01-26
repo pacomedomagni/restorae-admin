@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
 // Paths that don't require authentication
 const publicPaths = ['/login', '/forgot-password', '/reset-password'];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public paths
@@ -12,8 +13,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for auth token in cookies or authorization header
-  const token = request.cookies.get('adminToken')?.value;
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
 
   // If no token and trying to access protected route, redirect to login
   if (!token && pathname.startsWith('/dashboard')) {
@@ -25,6 +25,14 @@ export function middleware(request: NextRequest) {
   // If token exists and trying to access login, redirect to dashboard
   if (token && pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // If token exists but role is not allowed, redirect to login
+  if (token && pathname.startsWith('/dashboard')) {
+    const role = (token as any).role;
+    if (!['ADMIN', 'ANALYST', 'SUPPORT'].includes(role)) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
   }
 
   return NextResponse.next();
