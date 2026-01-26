@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getSession } from 'next-auth/react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -10,11 +11,11 @@ const axiosInstance = axios.create({
 });
 
 // Add auth interceptor
-axiosInstance.interceptors.request.use((config) => {
-  // Get token from session/storage
-  const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+axiosInstance.interceptors.request.use(async (config) => {
+  // Get token from NextAuth session
+  const session = await getSession();
+  if (session?.accessToken) {
+    config.headers.Authorization = `Bearer ${session.accessToken}`;
   }
   return config;
 });

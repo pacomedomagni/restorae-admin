@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { api } from '@/lib/api';
+import { signIn } from 'next-auth/react';
 
 interface LoginForm {
   email: string;
@@ -21,15 +21,19 @@ export default function LoginPage() {
     setError('');
     
     try {
-      const response = await api.post('/auth/login', data);
-      
-      // Store token
-      localStorage.setItem('adminToken', response.accessToken);
-      
-      // Redirect to dashboard
-      router.push('/dashboard');
+      const result = await signIn('credentials', {
+        redirect: false,
+        email: data.email,
+        password: data.password,
+      });
+
+      if (result?.error) {
+        setError('Invalid credentials');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid credentials');
+      setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }

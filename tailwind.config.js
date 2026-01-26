@@ -9,17 +9,20 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          50: '#faf5ff',
-          100: '#f3e8ff',
-          200: '#e9d5ff',
-          300: '#d8b4fe',
-          400: '#c084fc',
-          500: '#a855f7',
-          600: '#9333ea',
-          700: '#7e22ce',
-          800: '#6b21a8',
-          900: '#581c87',
+          50: '#F5FAF8',
+          100: '#EAF4F0',
+          200: '#CBE5DC',
+          300: '#ABD5C8',
+          400: '#7B8C86', // accentCalm
+          500: '#5A9E88',
+          600: '#1F4D3A', // accentPrimary
+          700: '#183C2D',
+          800: '#122D22',
+          900: '#0B1E16',
         },
+      },
+      backgroundImage: {
+        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(200, 146, 74, 0.15) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(31, 77, 58, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(123, 140, 134, 0.15) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(242, 231, 219, 0.8) 0px, transparent 50%)',
       },
     },
   },
