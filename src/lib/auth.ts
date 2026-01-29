@@ -1,12 +1,8 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-// Log environment at startup
-console.log('NextAuth Config - NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
-console.log('NextAuth Config - NODE_ENV:', process.env.NODE_ENV);
-
 export const authOptions: NextAuthOptions = {
-  debug: true,
+  debug: process.env.NODE_ENV !== 'production',
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -22,8 +18,6 @@ export const authOptions: NextAuthOptions = {
           const apiPrefix = process.env.NEXT_PUBLIC_API_PREFIX || '/api/v1';
           const url = `${apiRoot}${apiPrefix}/auth/login`;
           
-          console.log('Auth: Connecting to', url);
-          
           const res = await fetch(url, {
             method: 'POST',
             body: JSON.stringify({
@@ -37,10 +31,8 @@ export const authOptions: NextAuthOptions = {
 
           if (res.ok && data) {
             if (!['ADMIN', 'ANALYST', 'SUPPORT'].includes(data.user?.role)) {
-              console.log('Auth: User role not allowed:', data.user?.role);
               return null;
             }
-            console.log('Auth: Login successful for', data.user?.email);
             return {
               id: data.user.id,
               name: data.user.name,
@@ -49,10 +41,8 @@ export const authOptions: NextAuthOptions = {
               accessToken: data.accessToken,
             };
           }
-          console.log('Auth: Login failed', res.status, data);
           return null;
         } catch (e) {
-          console.error('Auth: Login error', e);
           return null;
         }
       }
@@ -84,7 +74,6 @@ export const authOptions: NextAuthOptions = {
     maxAge: 24 * 60 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET,
-  // Use non-secure cookie prefix for HTTP localhost
-  // When secure is false, NextAuth uses "next-auth." prefix instead of "__Secure-next-auth."
-  useSecureCookies: false,
+  // Use secure cookies in production (HTTPS), non-secure for local development (HTTP)
+  useSecureCookies: process.env.NODE_ENV === 'production',
 };
