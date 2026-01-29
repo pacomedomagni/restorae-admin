@@ -84,16 +84,3 @@ export const coachMarksApi = {
   update: (id: string, data: any) => api.put(`/coach-marks/admin/${id}`, data),
   delete: (id: string) => api.delete(`/coach-marks/admin/${id}`),
 };
-
-// =========================================================================
-// SEASONAL CONTENT API
-// =========================================================================
-
-export const seasonalApi = {
-  getAll: () => api.get('/seasonal/admin/all'),
-  getUpcoming: () => api.get('/seasonal/admin/upcoming'),
-  getAnalytics: () => api.get('/seasonal/admin/analytics'),
-  create: (data: any) => api.post('/seasonal/admin', data),
-  update: (id: string, data: any) => api.put(`/seasonal/admin/${id}`, data),
-  delete: (id: string) => api.delete(`/seasonal/admin/${id}`),
-};

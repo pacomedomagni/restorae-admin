@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import Image from 'next/image';
 import { 
   PlusIcon, 
   PencilIcon, 
@@ -171,10 +172,12 @@ export default function StoriesPage() {
               {/* Artwork */}
               <div className="relative h-40 bg-gradient-to-br from-indigo-500 to-purple-600">
                 {story.artworkUrl && (
-                  <img
+                  <Image
                     src={story.artworkUrl}
                     alt={story.title}
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
+                    unoptimized
                   />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
