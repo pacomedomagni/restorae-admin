@@ -15,6 +15,7 @@ import {
   MoonIcon,
   TrophyIcon,
   SparklesIcon,
+  LightBulbIcon,
 } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Content', href: '/dashboard/content', icon: DocumentTextIcon },
   { name: 'Stories', href: '/dashboard/stories', icon: MoonIcon },
   { name: 'Achievements', href: '/dashboard/achievements', icon: TrophyIcon },
+  { name: 'Coach Marks', href: '/dashboard/coach-marks', icon: LightBulbIcon },
   { name: 'Users', href: '/dashboard/users', icon: UsersIcon },
   { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: CreditCardIcon },
   { name: 'Notifications', href: '/dashboard/notifications', icon: BellIcon },

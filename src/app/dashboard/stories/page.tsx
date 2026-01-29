@@ -16,10 +16,19 @@ import ConfirmModal from '@/components/ConfirmModal';
 import Modal from '@/components/Modal';
 
 const moodOptions = [
-  { id: 'calm', name: 'Calm', emoji: '😌' },
-  { id: 'dreamy', name: 'Dreamy', emoji: '💭' },
-  { id: 'cozy', name: 'Cozy', emoji: '🛋️' },
-  { id: 'magical', name: 'Magical', emoji: '✨' },
+  { id: 'CALM', name: 'Calm', emoji: '😌' },
+  { id: 'DREAMY', name: 'Dreamy', emoji: '💭' },
+  { id: 'COZY', name: 'Cozy', emoji: '🛋️' },
+  { id: 'MAGICAL', name: 'Magical', emoji: '✨' },
+];
+
+const categoryOptions = [
+  { id: 'NATURE', name: 'Nature', icon: '🌿' },
+  { id: 'TRAVEL', name: 'Travel', icon: '✈️' },
+  { id: 'FANTASY', name: 'Fantasy', icon: '🧙' },
+  { id: 'MEDITATION', name: 'Meditation', icon: '🧘' },
+  { id: 'SOUNDSCAPES', name: 'Soundscapes', icon: '🎧' },
+  { id: 'CLASSICS', name: 'Classics', icon: '📚' },
 ];
 
 const statusColors: Record<string, string> = {
@@ -45,11 +54,6 @@ export default function StoriesPage() {
     queryFn: storiesApi.getAll,
   });
 
-  const { data: categories } = useQuery({
-    queryKey: ['story-categories'],
-    queryFn: storiesApi.getCategories,
-  });
-
   const deleteMutation = useMutation({
     mutationFn: (id: string) => storiesApi.delete(id),
     onSuccess: () => {
@@ -60,7 +64,7 @@ export default function StoriesPage() {
 
   const filteredStories = stories?.filter((story: any) => {
     if (filterCategory === 'all') return true;
-    return story.categories?.some((c: any) => c.slug === filterCategory);
+    return story.category === filterCategory;
   }) || [];
 
   const freeCount = stories?.filter((s: any) => !s.isPremium).length || 0;
@@ -137,12 +141,12 @@ export default function StoriesPage() {
         >
           All
         </button>
-        {categories?.map((cat: any) => (
+        {categoryOptions.map((cat) => (
           <button
             key={cat.id}
-            onClick={() => setFilterCategory(cat.slug)}
+            onClick={() => setFilterCategory(cat.id)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium ${
-              filterCategory === cat.slug
+              filterCategory === cat.id
                 ? 'bg-indigo-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -200,24 +204,21 @@ export default function StoriesPage() {
                 </div>
                 
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {story.categories?.map((cat: any) => (
-                    <span
-                      key={cat.id}
-                      className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
-                    >
-                      {cat.name}
+                  {story.category && (
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                      {categoryOptions.find(c => c.id === story.category)?.icon} {categoryOptions.find(c => c.id === story.category)?.name || story.category}
                     </span>
-                  ))}
+                  )}
                   {story.mood && (
                     <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-600">
-                      {moodOptions.find(m => m.id === story.mood)?.emoji} {story.mood}
+                      {moodOptions.find(m => m.id === story.mood)?.emoji} {moodOptions.find(m => m.id === story.mood)?.name || story.mood}
                     </span>
                   )}
                 </div>
 
                 <div className="mt-4 flex justify-between items-center">
                   <div className="text-xs text-gray-400">
-                    {story.playCount || 0} plays
+                    {story.listenCount || 0} plays
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -244,7 +245,6 @@ export default function StoriesPage() {
       {(showCreateModal || editingStory) && (
         <StoryFormModal
           story={editingStory}
-          categories={categories || []}
           onClose={() => {
             setShowCreateModal(false);
             setEditingStory(null);
@@ -269,11 +269,9 @@ export default function StoriesPage() {
 // Story Form Modal Component
 function StoryFormModal({ 
   story, 
-  categories,
   onClose 
 }: { 
   story?: any; 
-  categories: any[];
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -281,16 +279,20 @@ function StoryFormModal({
     slug: story?.slug || '',
     title: story?.title || '',
     subtitle: story?.subtitle || '',
+    description: story?.description || '',
     narrator: story?.narrator || '',
     duration: story?.duration || 1800,
     audioUrl: story?.audioUrl || '',
     artworkUrl: story?.artworkUrl || '',
-    mood: story?.mood || 'calm',
+    category: story?.category || 'NATURE',
+    mood: story?.mood || 'CALM',
     isPremium: story?.isPremium || false,
     status: story?.status || 'DRAFT',
-    categoryIds: story?.categories?.map((c: any) => c.id) || [],
     order: story?.order || 0,
+    tags: story?.tags || [],
   });
+
+  const [tagInput, setTagInput] = useState('');
 
   const createMutation = useMutation({
     mutationFn: (data: any) => storiesApi.create(data),
@@ -317,11 +319,22 @@ function StoryFormModal({
     }
   };
 
+  const addTag = () => {
+    if (tagInput && !formData.tags.includes(tagInput)) {
+      setFormData({ ...formData, tags: [...formData.tags, tagInput] });
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tag: string) => {
+    setFormData({ ...formData, tags: formData.tags.filter((t: string) => t !== tag) });
+  };
+
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Modal isOpen onClose={onClose} title={story ? 'Edit Story' : 'Add New Story'}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Slug</label>
@@ -330,6 +343,7 @@ function StoryFormModal({
               value={formData.slug}
               onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              placeholder="moonlit-meadow"
               required
             />
           </div>
@@ -340,6 +354,7 @@ function StoryFormModal({
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              placeholder="The Moonlit Meadow"
               required
             />
           </div>
@@ -352,6 +367,18 @@ function StoryFormModal({
             value={formData.subtitle}
             onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            placeholder="A peaceful journey through nature"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Description</label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            rows={3}
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            placeholder="A soothing bedtime story..."
           />
         </div>
 
@@ -363,6 +390,7 @@ function StoryFormModal({
               value={formData.narrator}
               onChange={(e) => setFormData({ ...formData, narrator: e.target.value })}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              placeholder="Sarah Johnson"
             />
           </div>
           <div>
@@ -400,6 +428,20 @@ function StoryFormModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
+            <label className="block text-sm font-medium text-gray-700">Category</label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              {categoryOptions.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.icon} {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-gray-700">Mood</label>
             <select
               value={formData.mood}
@@ -413,6 +455,9 @@ function StoryFormModal({
               ))}
             </select>
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Status</label>
             <select
@@ -425,40 +470,52 @@ function StoryFormModal({
               <option value="ARCHIVED">Archived</option>
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Order</label>
+            <input
+              type="number"
+              value={formData.order}
+              onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              min={0}
+            />
+          </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Categories</label>
-          <div className="flex flex-wrap gap-2">
-            {categories.map((cat) => (
-              <label
-                key={cat.id}
-                className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm cursor-pointer ${
-                  formData.categoryIds.includes(cat.id)
-                    ? 'bg-indigo-100 text-indigo-700'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+          <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              placeholder="Add a tag..."
+            />
+            <button
+              type="button"
+              onClick={addTag}
+              className="rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            >
+              Add
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1">
+            {formData.tags.map((tag: string) => (
+              <span
+                key={tag}
+                className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700"
               >
-                <input
-                  type="checkbox"
-                  checked={formData.categoryIds.includes(cat.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setFormData({
-                        ...formData,
-                        categoryIds: [...formData.categoryIds, cat.id],
-                      });
-                    } else {
-                      setFormData({
-                        ...formData,
-                        categoryIds: formData.categoryIds.filter((id: string) => id !== cat.id),
-                      });
-                    }
-                  }}
-                  className="sr-only"
-                />
-                {cat.icon} {cat.name}
-              </label>
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  className="ml-1 text-indigo-400 hover:text-indigo-600"
+                >
+                  ×
+                </button>
+              </span>
             ))}
           </div>
         </div>

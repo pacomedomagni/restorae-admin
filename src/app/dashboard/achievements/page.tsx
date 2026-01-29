@@ -17,26 +17,26 @@ import Modal from '@/components/Modal';
 
 const categories = [
   { id: 'all', name: 'All', icon: '🏆' },
-  { id: 'consistency', name: 'Consistency', icon: '🔥' },
-  { id: 'session', name: 'Session', icon: '🎯' },
-  { id: 'mindfulness', name: 'Mindfulness', icon: '🧘' },
-  { id: 'exploration', name: 'Exploration', icon: '🧭' },
-  { id: 'mastery', name: 'Mastery', icon: '👑' },
-  { id: 'special', name: 'Special', icon: '⭐' },
+  { id: 'CONSISTENCY', name: 'Consistency', icon: '🔥' },
+  { id: 'SESSION', name: 'Session', icon: '🎯' },
+  { id: 'MINDFULNESS', name: 'Mindfulness', icon: '🧘' },
+  { id: 'EXPLORATION', name: 'Exploration', icon: '🧭' },
+  { id: 'MASTERY', name: 'Mastery', icon: '👑' },
+  { id: 'SPECIAL', name: 'Special', icon: '⭐' },
 ];
 
 const tiers = [
-  { id: 'bronze', name: 'Bronze', color: 'bg-amber-600' },
-  { id: 'silver', name: 'Silver', color: 'bg-gray-400' },
-  { id: 'gold', name: 'Gold', color: 'bg-yellow-400' },
-  { id: 'platinum', name: 'Platinum', color: 'bg-cyan-300' },
+  { id: 'BRONZE', name: 'Bronze', color: 'bg-amber-600' },
+  { id: 'SILVER', name: 'Silver', color: 'bg-gray-400' },
+  { id: 'GOLD', name: 'Gold', color: 'bg-yellow-400' },
+  { id: 'PLATINUM', name: 'Platinum', color: 'bg-cyan-300' },
 ];
 
 const tierColors: Record<string, string> = {
-  bronze: 'bg-amber-100 text-amber-800 border-amber-300',
-  silver: 'bg-gray-100 text-gray-800 border-gray-300',
-  gold: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  platinum: 'bg-cyan-100 text-cyan-800 border-cyan-300',
+  BRONZE: 'bg-amber-100 text-amber-800 border-amber-300',
+  SILVER: 'bg-gray-100 text-gray-800 border-gray-300',
+  GOLD: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+  PLATINUM: 'bg-cyan-100 text-cyan-800 border-cyan-300',
 };
 
 export default function AchievementsPage() {
@@ -49,11 +49,6 @@ export default function AchievementsPage() {
   const { data: achievements, isLoading } = useQuery({
     queryKey: ['admin-achievements'],
     queryFn: achievementsApi.getAll,
-  });
-
-  const { data: leaderboard } = useQuery({
-    queryKey: ['leaderboard'],
-    queryFn: () => achievementsApi.getLeaderboard(5),
   });
 
   const deleteMutation = useMutation({
@@ -74,6 +69,12 @@ export default function AchievementsPage() {
   const activeCount = achievements?.filter((a: any) => a.isActive).length || 0;
   const secretCount = achievements?.filter((a: any) => a.isSecret).length || 0;
 
+  // Group by tier for stats
+  const tierCounts = tiers.reduce((acc, tier) => {
+    acc[tier.id] = achievements?.filter((a: any) => a.tier === tier.id).length || 0;
+    return acc;
+  }, {} as Record<string, number>);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -92,7 +93,7 @@ export default function AchievementsPage() {
         </button>
       </div>
 
-      {/* Stats & Leaderboard */}
+      {/* Stats */}
       <div className="grid grid-cols-5 gap-4">
         <div className="rounded-lg bg-white p-4 shadow">
           <div className="flex items-center">
@@ -131,15 +132,16 @@ export default function AchievementsPage() {
           </div>
         </div>
 
-        {/* Mini Leaderboard */}
+        {/* Tier Breakdown */}
         <div className="rounded-lg bg-white p-4 shadow">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Top Players</h3>
-          <div className="space-y-1">
-            {leaderboard?.slice(0, 3).map((user: any, i: number) => (
-              <div key={user.id} className="flex items-center text-sm">
-                <span className="w-4 font-bold text-gray-400">{i + 1}</span>
-                <span className="ml-2 truncate text-gray-900">{user.user?.name || 'User'}</span>
-                <span className="ml-auto text-purple-600">Lv.{user.level}</span>
+          <h3 className="text-sm font-medium text-gray-500 mb-2">By Tier</h3>
+          <div className="space-y-1 text-sm">
+            {tiers.map((tier) => (
+              <div key={tier.id} className="flex items-center justify-between">
+                <span className={`px-1.5 py-0.5 rounded text-xs ${tierColors[tier.id]}`}>
+                  {tier.name}
+                </span>
+                <span className="font-medium">{tierCounts[tier.id]}</span>
               </div>
             ))}
           </div>
@@ -181,8 +183,8 @@ export default function AchievementsPage() {
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">{achievement.icon || '🏆'}</span>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{achievement.name}</h3>
-                    <p className="text-xs text-gray-500 capitalize">{achievement.category}</p>
+                    <h3 className="font-semibold text-gray-900">{achievement.title}</h3>
+                    <p className="text-xs text-gray-500 capitalize">{achievement.category?.toLowerCase()}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -192,7 +194,7 @@ export default function AchievementsPage() {
                   <span className={`rounded px-1.5 py-0.5 text-xs font-medium capitalize ${
                     tierColors[achievement.tier]
                   }`}>
-                    {achievement.tier}
+                    {achievement.tier?.toLowerCase()}
                   </span>
                 </div>
               </div>
@@ -200,6 +202,10 @@ export default function AchievementsPage() {
               <p className="mt-2 text-sm text-gray-600 line-clamp-2">
                 {achievement.description}
               </p>
+
+              <div className="mt-2 text-xs text-gray-400">
+                Requirement: {achievement.requirement}
+              </div>
 
               <div className="mt-3 flex items-center justify-between">
                 <div className="flex items-center gap-3 text-xs text-gray-400">
@@ -243,7 +249,7 @@ export default function AchievementsPage() {
         onClose={() => setDeletingAchievement(null)}
         onConfirm={() => deleteMutation.mutate(deletingAchievement?.id)}
         title="Delete Achievement"
-        message={`Are you sure you want to delete "${deletingAchievement?.name}"? This will also remove it from all users who have unlocked it.`}
+        message={`Are you sure you want to delete "${deletingAchievement?.title}"? This will also remove it from all users who have unlocked it.`}
         confirmText="Delete"
         isLoading={deleteMutation.isPending}
       />
@@ -261,12 +267,13 @@ function AchievementFormModal({
 }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
-    slug: achievement?.slug || '',
-    name: achievement?.name || '',
+    key: achievement?.key || '',
+    title: achievement?.title || '',
     description: achievement?.description || '',
     icon: achievement?.icon || '🏆',
-    category: achievement?.category || 'session',
-    tier: achievement?.tier || 'bronze',
+    category: achievement?.category || 'SESSION',
+    tier: achievement?.tier || 'BRONZE',
+    requirement: achievement?.requirement || 1,
     xpReward: achievement?.xpReward || 25,
     order: achievement?.order || 0,
     isActive: achievement?.isActive ?? true,
@@ -305,25 +312,25 @@ function AchievementFormModal({
 
   return (
     <Modal isOpen onClose={onClose} title={achievement ? 'Edit Achievement' : 'Add New Achievement'}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Slug</label>
+            <label className="block text-sm font-medium text-gray-700">Key</label>
             <input
               type="text"
-              value={formData.slug}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+              value={formData.key}
+              onChange={(e) => setFormData({ ...formData, key: e.target.value })}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
               placeholder="first-breath"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Name</label>
+            <label className="block text-sm font-medium text-gray-700">Title</label>
             <input
               type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
               placeholder="First Breath"
               required
@@ -394,7 +401,18 @@ function AchievementFormModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Requirement</label>
+            <input
+              type="number"
+              value={formData.requirement}
+              onChange={(e) => setFormData({ ...formData, requirement: parseInt(e.target.value) })}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              min={1}
+            />
+            <p className="mt-1 text-xs text-gray-400">Target count to unlock</p>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">XP Reward</label>
             <input
