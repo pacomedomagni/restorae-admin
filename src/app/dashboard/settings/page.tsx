@@ -36,7 +36,7 @@ export default function SettingsPage() {
   // Fetch feature flags
   const { data: featureFlags, isLoading: flagsLoading } = useQuery({
     queryKey: ['feature-flags'],
-    queryFn: () => api.get('/admin/settings/feature-flags'),
+    queryFn: () => api.get('/admin/settings/features'),
   });
 
   // Fetch system config
@@ -70,7 +70,7 @@ export default function SettingsPage() {
   // Toggle feature flag mutation
   const toggleFlagMutation = useMutation({
     mutationFn: ({ key, enabled }: { key: string; enabled: boolean }) =>
-      api.patch(`/admin/settings/feature-flags/${key}`, { enabled }),
+      api.patch(`/admin/settings/features/${key}`, { enabled }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feature-flags'] });
     },

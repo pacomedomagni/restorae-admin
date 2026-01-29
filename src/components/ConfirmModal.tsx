@@ -12,6 +12,7 @@ interface ConfirmModalProps {
   confirmText?: string;
   confirmColor?: 'red' | 'green' | 'brand';
   onConfirm: () => void | Promise<void>;
+  isLoading?: boolean;
 }
 
 export default function ConfirmModal({
@@ -22,6 +23,7 @@ export default function ConfirmModal({
   confirmText = 'Confirm',
   confirmColor = 'brand',
   onConfirm,
+  isLoading = false,
 }: ConfirmModalProps) {
   const handleConfirm = async () => {
     await onConfirm();
@@ -47,9 +49,10 @@ export default function ConfirmModal({
           </button>
           <button
             onClick={handleConfirm}
-            className={`rounded-md px-4 py-2 text-sm font-medium text-white ${colorClasses[confirmColor]}`}
+            disabled={isLoading}
+            className={`rounded-md px-4 py-2 text-sm font-medium text-white ${colorClasses[confirmColor]} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            {confirmText}
+            {isLoading ? 'Processing...' : confirmText}
           </button>
         </div>
       </div>

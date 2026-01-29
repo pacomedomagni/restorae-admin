@@ -16,6 +16,7 @@ import {
   TrophyIcon,
   SparklesIcon,
   LightBulbIcon,
+  ServerStackIcon,
 } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -29,6 +30,7 @@ const navigation = [
   { name: 'Notifications', href: '/dashboard/notifications', icon: BellIcon },
   { name: 'Feedback', href: '/dashboard/feedback', icon: ChatBubbleLeftRightIcon },
   { name: 'Analytics', href: '/dashboard/analytics', icon: ChartBarIcon },
+  { name: 'Metrics', href: '/dashboard/metrics', icon: ServerStackIcon },
   { name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon },
 ];
 
