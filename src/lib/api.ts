@@ -14,11 +14,15 @@ const axiosInstance = axios.create({
 
 // Add auth interceptor
 axiosInstance.interceptors.request.use(async (config) => {
-  // Get token from NextAuth session
   const session = await getSession();
-  if (session?.accessToken) {
-    config.headers.Authorization = `Bearer ${session.accessToken}`;
+  const accessToken = (session as any)?.accessToken;
+  
+  if (!accessToken) {
+    // No token - reject the request immediately instead of sending a 401
+    throw new axios.Cancel('No auth token available');
   }
+  
+  config.headers.Authorization = `Bearer ${accessToken}`;
   return config;
 });
 
@@ -26,11 +30,9 @@ axiosInstance.interceptors.request.use(async (config) => {
 axiosInstance.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized - redirect to login
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
+    // Cancelled requests (no token) should just be silently ignored
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
     }
     return Promise.reject(error);
   }
@@ -55,11 +57,8 @@ export const storiesApi = {
   update: (id: string, data: any) => api.put(`/stories/admin/${id}`, data),
   delete: (id: string) => api.delete(`/stories/admin/${id}`),
   
-  // Categories
+  // Categories (read-only - no admin endpoints for categories)
   getCategories: () => api.get('/stories/categories'),
-  createCategory: (data: any) => api.post('/stories/admin/categories', data),
-  updateCategory: (id: string, data: any) => api.put(`/stories/admin/categories/${id}`, data),
-  deleteCategory: (id: string) => api.delete(`/stories/admin/categories/${id}`),
 };
 
 // =========================================================================

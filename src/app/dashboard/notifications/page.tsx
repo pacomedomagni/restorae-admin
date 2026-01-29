@@ -7,7 +7,6 @@ import { api } from '@/lib/api';
 import { PaperAirplaneIcon, ClockIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface NotificationFormData {
-  target: string;
   title: string;
   body: string;
   schedule?: string;
@@ -18,12 +17,13 @@ interface Campaign {
   id: string;
   title: string;
   body: string;
-  target: string;
+  segmentId?: string;
   status: string;
   sentAt?: string;
   scheduledFor?: string;
-  sentCount: number;
   createdAt: string;
+  segment?: { name: string };
+  _count?: { logs: number };
 }
 
 export default function NotificationsPage() {
@@ -34,21 +34,30 @@ export default function NotificationsPage() {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<NotificationFormData>();
 
   // Fetch recent campaigns
-  const { data: campaigns, isLoading: campaignsLoading } = useQuery({
+  const { data: campaignsData, isLoading: campaignsLoading } = useQuery({
     queryKey: ['notification-campaigns'],
-    queryFn: () => api.get('/admin/notifications/campaigns'),
+    queryFn: () => api.get<{ campaigns: Campaign[]; total: number }>('/admin/notifications/campaigns'),
   });
 
-  // Send notification mutation
+  const campaigns = campaignsData?.campaigns;
+
+  // Send notification mutation - creates campaign and sends immediately
   const sendMutation = useMutation({
     mutationFn: async (data: NotificationFormData) => {
-      return api.post('/admin/notifications/send', {
-        target: data.target,
+      // First create the campaign
+      const campaign = await api.post<Campaign>('/admin/notifications/campaigns', {
         title: data.title,
         body: data.body,
         scheduledFor: data.schedule ? new Date(data.schedule).toISOString() : undefined,
         data: data.data ? JSON.parse(data.data) : undefined,
       });
+      
+      // If not scheduled, send immediately
+      if (!data.schedule) {
+        return api.post(`/admin/notifications/campaigns/${campaign.id}/send`);
+      }
+      
+      return campaign;
     },
     onSuccess: (result: any) => {
       setSent(result.sent || result.scheduled || 0);
@@ -72,7 +81,7 @@ export default function NotificationsPage() {
   });
 
   const onSubmit = (data: NotificationFormData) => {
-    if (window.confirm(`Send notification to ${data.target} users?`)) {
+    if (window.confirm('Send this notification to all users?')) {
       sendMutation.mutate(data);
     }
   };
@@ -106,17 +115,7 @@ export default function NotificationsPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Target Audience</label>
-            <select
-              {...register('target', { required: true })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-500 focus:ring-brand-500"
-            >
-              <option value="all">All Users</option>
-              <option value="premium">Premium Users</option>
-              <option value="free">Free Users</option>
-              <option value="inactive">Inactive Users (7+ days)</option>
-              <option value="trial">Trial Users</option>
-              <option value="expiring">Trials Expiring Soon</option>
-            </select>
+            <p className="mt-1 text-sm text-gray-500">Sends to all users with push notifications enabled</p>
           </div>
           
           <div>
@@ -212,7 +211,7 @@ export default function NotificationsPage() {
           <div className="mt-4 flex justify-center">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
           </div>
-        ) : campaigns?.length > 0 ? (
+        ) : campaigns && campaigns.length > 0 ? (
           <div className="mt-4 space-y-3">
             {campaigns.map((campaign: Campaign) => (
               <div key={campaign.id} className="flex items-start justify-between rounded-md border border-gray-200 p-3">
@@ -220,10 +219,10 @@ export default function NotificationsPage() {
                   <div className="font-medium text-gray-900">{campaign.title}</div>
                   <div className="text-sm text-gray-500 mt-1">{campaign.body}</div>
                   <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-                    <span className="capitalize">{campaign.target}</span>
+                    <span>{campaign.segment?.name || 'All Users'}</span>
                     <span>
                       {campaign.status === 'SENT' 
-                        ? `Sent to ${campaign.sentCount} devices` 
+                        ? `Sent to ${campaign._count?.logs || 0} devices` 
                         : campaign.status === 'SCHEDULED'
                         ? `Scheduled for ${new Date(campaign.scheduledFor!).toLocaleString()}`
                         : campaign.status}

@@ -1,8 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSession } from 'next-auth/react';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 
@@ -11,16 +9,10 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isLoading, isAuthenticated, user } = useAuth();
-  const router = useRouter();
+  const { status } = useSession();
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isLoading, isAuthenticated, router]);
-
-  if (isLoading) {
+  // Middleware handles auth, just show loading while session loads
+  if (status === 'loading') {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -29,10 +21,6 @@ export default function DashboardLayout({
         </div>
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    return null;
   }
 
   return (

@@ -7,6 +7,8 @@ import { useState } from 'react';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from 'react-hot-toast';
 
+import axios from 'axios';
+
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -15,6 +17,19 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           queries: {
             staleTime: 60 * 1000,
             refetchOnWindowFocus: false,
+            // Retry cancelled requests (waiting for auth) but not 401s
+            retry: (failureCount, error: any) => {
+              // If cancelled due to no token, retry (session loading)
+              if (axios.isCancel(error)) {
+                return failureCount < 5;
+              }
+              // Don't retry 401s
+              if (error?.response?.status === 401) {
+                return false;
+              }
+              return failureCount < 3;
+            },
+            retryDelay: (attemptIndex) => Math.min(500 * (attemptIndex + 1), 2000),
           },
         },
       })
@@ -22,7 +37,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider>
+      <SessionProvider refetchInterval={0} refetchOnWindowFocus={true}>
         <AuthProvider>
           {children}
           <Toaster

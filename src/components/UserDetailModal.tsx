@@ -64,7 +64,7 @@ export default function UserDetailModal({ isOpen, onClose, userId }: UserDetailM
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => api.delete(`/admin/users/${userId}`),
+    mutationFn: () => api.post(`/admin/users/${userId}/delete`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       onClose();

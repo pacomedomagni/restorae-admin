@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { signIn } from 'next-auth/react';
 
@@ -10,11 +10,14 @@ interface LoginForm {
   password: string;
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
+
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
 
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
@@ -22,19 +25,20 @@ export default function LoginPage() {
     
     try {
       const result = await signIn('credentials', {
-        redirect: false,
         email: data.email,
         password: data.password,
+        redirect: false,
       });
 
       if (result?.error) {
         setError('Invalid credentials');
-      } else {
-        router.push('/dashboard');
+        setLoading(false);
+      } else if (result?.ok) {
+        // Full page navigation to ensure cookies are sent
+        window.location.href = callbackUrl;
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
-    } finally {
       setLoading(false);
     }
   };
@@ -102,11 +106,23 @@ export default function LoginPage() {
 
           <div className="text-center">
             <p className="text-xs text-gray-500">
-              Default credentials: admin@restorae.com / (set in seed script)
+              Credentials: admin@restorae.com / Admin123!
             </p>
           </div>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

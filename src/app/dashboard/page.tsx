@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import {
   UsersIcon,
   CurrencyDollarIcon,
@@ -51,14 +52,19 @@ function StatCard({ name, value, change, changeType, icon: Icon }: StatCardProps
 }
 
 export default function DashboardPage() {
+  const { status } = useSession();
+  const isAuthenticated = status === 'authenticated';
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: () => api.get('/admin/analytics/dashboard'),
+    enabled: isAuthenticated, // Only fetch when session is ready
   });
 
   const { data: feedback } = useQuery({
     queryKey: ['recent-feedback'],
     queryFn: () => api.get('/admin/analytics/feedback?limit=5'),
+    enabled: isAuthenticated, // Only fetch when session is ready
   });
 
   if (isLoading) {
