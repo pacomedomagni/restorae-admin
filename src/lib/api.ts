@@ -43,3 +43,57 @@ export const api = {
   put: <T = any>(url: string, data?: any) => axiosInstance.put<any, T>(url, data),
   delete: <T = any>(url: string) => axiosInstance.delete<any, T>(url),
 };
+
+// =========================================================================
+// STORIES API
+// =========================================================================
+
+export const storiesApi = {
+  getAll: () => api.get('/stories/admin/all'),
+  getById: (id: string) => api.get(`/stories/${id}`),
+  create: (data: any) => api.post('/stories/admin', data),
+  update: (id: string, data: any) => api.put(`/stories/admin/${id}`, data),
+  delete: (id: string) => api.delete(`/stories/admin/${id}`),
+  
+  // Categories
+  getCategories: () => api.get('/stories/categories'),
+  createCategory: (data: any) => api.post('/stories/admin/categories', data),
+  updateCategory: (id: string, data: any) => api.put(`/stories/admin/categories/${id}`, data),
+  deleteCategory: (id: string) => api.delete(`/stories/admin/categories/${id}`),
+};
+
+// =========================================================================
+// ACHIEVEMENTS API
+// =========================================================================
+
+export const achievementsApi = {
+  getAll: () => api.get('/achievements/admin/all'),
+  create: (data: any) => api.post('/achievements/admin', data),
+  update: (id: string, data: any) => api.put(`/achievements/admin/${id}`, data),
+  delete: (id: string) => api.delete(`/achievements/admin/${id}`),
+  getLeaderboard: (limit?: number) => api.get(`/achievements/leaderboard${limit ? `?limit=${limit}` : ''}`),
+};
+
+// =========================================================================
+// COACH MARKS API
+// =========================================================================
+
+export const coachMarksApi = {
+  getAll: () => api.get('/coach-marks/admin/all'),
+  create: (data: any) => api.post('/coach-marks/admin', data),
+  update: (id: string, data: any) => api.put(`/coach-marks/admin/${id}`, data),
+  delete: (id: string) => api.delete(`/coach-marks/admin/${id}`),
+};
+
+// =========================================================================
+// SEASONAL CONTENT API
+// =========================================================================
+
+export const seasonalApi = {
+  getAll: () => api.get('/seasonal/admin/all'),
+  getUpcoming: () => api.get('/seasonal/admin/upcoming'),
+  getAnalytics: () => api.get('/seasonal/admin/analytics'),
+  create: (data: any) => api.post('/seasonal/admin', data),
+  update: (id: string, data: any) => api.put(`/seasonal/admin/${id}`, data),
+  delete: (id: string) => api.delete(`/seasonal/admin/${id}`),
+};

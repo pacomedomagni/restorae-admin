@@ -12,11 +12,16 @@ import {
   ChatBubbleLeftRightIcon,
   ChartBarIcon,
   Cog6ToothIcon,
+  MoonIcon,
+  TrophyIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Content', href: '/dashboard/content', icon: DocumentTextIcon },
+  { name: 'Stories', href: '/dashboard/stories', icon: MoonIcon },
+  { name: 'Achievements', href: '/dashboard/achievements', icon: TrophyIcon },
   { name: 'Users', href: '/dashboard/users', icon: UsersIcon },
   { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: CreditCardIcon },
   { name: 'Notifications', href: '/dashboard/notifications', icon: BellIcon },
