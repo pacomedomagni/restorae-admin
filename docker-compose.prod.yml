@@ -1,0 +1,36 @@
+# =============================================================================
+# Restorae Admin Dashboard - Production Docker Compose
+# =============================================================================
+# This connects to the existing Restorae backend network
+# Port 3002 to avoid conflicts with Loni (3000, 3009) and Restorae backend (3001)
+# =============================================================================
+
+version: '3.8'
+
+services:
+  admin:
+    image: restorae-admin:latest
+    container_name: restorae-admin
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=https://api.restorae.kouakoudomagni.com
+      - NEXT_PUBLIC_API_PREFIX=/api/v1
+      - INTERNAL_API_URL=http://restorae-backend:3001
+      - NEXTAUTH_URL=https://admin.restorae.kouakoudomagni.com
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - SESSION_MAX_AGE=86400
+    networks:
+      - restorae_default
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3002"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  restorae_default:
+    external: true
