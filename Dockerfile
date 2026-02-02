@@ -5,12 +5,6 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Build args for Next.js build-time environment
-ARG NEXTAUTH_SECRET
-ARG NEXTAUTH_URL
-ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-ENV NEXTAUTH_URL=${NEXTAUTH_URL}
-
 # Copy package files
 COPY package*.json ./
 
@@ -41,8 +35,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies (need next for runtime)
-RUN npm ci && npm cache clean --force
+# Install production dependencies only (Next.js runtime deps are in "dependencies")
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Copy built application from builder
 COPY --from=builder /app/.next ./.next
